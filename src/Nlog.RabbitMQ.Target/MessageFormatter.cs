@@ -39,12 +39,16 @@ namespace Nlog.RabbitMQ.Target
                     if (string.IsNullOrEmpty(key))
                         continue;
 
-                    if (key == "tags" && propertyPair.Value is IEnumerable<string> tags)
+                    var value = propertyPair.Value;
+                    if (value is Delegate)
+                        continue;
+
+                    if (key == "tags" && value is IEnumerable<string> tags)
                     {
                         foreach (var tag in tags)
                             logLine.AddTag(tag);
                     }
-                    else if (key == "fields" && propertyPair.Value is IEnumerable<KeyValuePair<string, object>> bonusFields)
+                    else if (key == "fields" && value is IEnumerable<KeyValuePair<string, object>> bonusFields)
                     {
                         foreach (var kv in bonusFields)
                             logLine.AddField(kv.Key, kv.Value);
@@ -53,7 +57,7 @@ namespace Nlog.RabbitMQ.Target
                     {
                         try
                         {
-                            JsonSerializer.Serialize(propertyPair.Value, _jsonOptions);
+                            JsonSerializer.Serialize(value, _jsonOptions);
                         }
                         catch (NotSupportedException ex)
                         {
@@ -62,7 +66,7 @@ namespace Nlog.RabbitMQ.Target
                         }
                     }
 
-                    logLine.AddField(key, propertyPair.Value);
+                    logLine.AddField(key, value);
                 }
             }
 
@@ -84,7 +88,7 @@ namespace Nlog.RabbitMQ.Target
             if (logLine.Tags == null)
                 logLine.Tags = Array.Empty<string>();
 
-            string serializedJson = JsonSerializer.Serialize(logLine, typeof(LogLine), _jsonOptions);
+            string serializedJson = JsonSerializer.Serialize<LogLine>(logLine, _jsonOptions);
             return serializedJson;
         }
 
