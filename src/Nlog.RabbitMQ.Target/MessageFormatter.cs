@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -17,7 +17,7 @@ namespace Nlog.RabbitMQ.Target
         {
             _jsonOptions = CreateJsonSerializerSettings();
         }
-        
+
         public string GetMessage(string message, string messageSource, LogEventInfo logEvent, IList<Field> fields, ICollection<KeyValuePair<string, object>> contextProperties)
         {
             var logLine = new LogLine
@@ -49,6 +49,18 @@ namespace Nlog.RabbitMQ.Target
                         foreach (var kv in bonusFields)
                             logLine.AddField(kv.Key, kv.Value);
                     }
+                    else
+                    {
+                        try
+                        {
+                            JsonSerializer.Serialize(propertyPair.Value, _jsonOptions);
+                        }
+                        catch (NotSupportedException ex)
+                        {
+                            Console.WriteLine($"Skipped unserializable property: {key} with error: {ex.Message}");
+                            continue;
+                        }
+                    }
 
                     logLine.AddField(key, propertyPair.Value);
                 }
@@ -72,13 +84,13 @@ namespace Nlog.RabbitMQ.Target
             if (logLine.Tags == null)
                 logLine.Tags = Array.Empty<string>();
 
-            var serializedJson = JsonSerializer.Serialize(logLine, typeof(LogLine), _jsonOptions);
-            return  serializedJson;
+            string serializedJson = JsonSerializer.Serialize(logLine, typeof(LogLine), _jsonOptions);
+            return serializedJson;
         }
 
         private JsonSerializerOptions CreateJsonSerializerSettings()
         {
-            var jsonSerializerSettings = new JsonSerializerOptions { ReferenceHandler  = ReferenceHandler.IgnoreCycles };
+            var jsonSerializerSettings = new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles };
             jsonSerializerSettings.Converters.Add(new JsonStringEnumConverter());
             return jsonSerializerSettings;
         }
